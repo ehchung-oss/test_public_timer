@@ -2,50 +2,52 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Half-Bridge PCB Layout Tool</title>
+<title>Half-Bridge PCB CAD Tool</title>
 
 <style>
-  body { font-family: Arial; }
-  .controls { margin-bottom: 10px; }
+body { font-family: Arial; }
 
-  svg {
-    background: #1b5e20; /* PCB green */
-    border: 2px solid #333;
-  }
+svg {
+  background: #1b5e20;
+  border: 2px solid #333;
+}
 
-  /* Layer colors */
-  .top    { fill: #c62828; }
-  .bottom { fill: #1565c0; }
-  .trace  { stroke-width: 1.5; fill: none; }
-  .gnd    { fill: rgba(0,0,0,0.25); }
-  .vdc    { fill: rgba(255,255,255,0.25); }
+/* Layers */
+.top    { stroke: #ffeb3b; }
+.bottom { stroke: #03a9f4; }
+.trace  { stroke-width: 1.8; fill: none; }
+.power  { stroke-width: 3.5; }
+.gate   { stroke-dasharray: 2,1; }
 
-  /* Parts */
-  .part { stroke: black; stroke-width: 0.3; }
+.gnd { fill: rgba(0,0,0,0.25); }
+.vdc { fill: rgba(255,255,255,0.25); }
 
-  /* Silkscreen */
-  .silk { fill: white; font-size: 2px; }
+/* Parts */
+.part { fill: #cfd8dc; stroke: black; stroke-width: 0.3; }
 
+/* Via */
+.via { fill: #000; }
+
+/* Silkscreen */
+.silk { fill: white; font-size: 2px; text-anchor: middle; }
 </style>
 </head>
 
 <body>
 
-<h3>Half-Bridge PCB Layout (Conceptual CAD)</h3>
+<h3>Half-Bridge PCB Layout – Power / Gate Loop Visualization</h3>
 
-<div class="controls">
-  <label><input type="checkbox" checked onchange="toggle('layer-top')"> Top</label>
-  <label><input type="checkbox" checked onchange="toggle('layer-gnd')"> GND</label>
-  <label><input type="checkbox" checked onchange="toggle('layer-vdc')"> VDC</label>
-  <label><input type="checkbox" checked onchange="toggle('layer-bottom')"> Bottom</label>
-</div>
+<label><input type="checkbox" checked onclick="toggle('layer-top')"> Top</label>
+<label><input type="checkbox" checked onclick="toggle('layer-gnd')"> GND</label>
+<label><input type="checkbox" checked onclick="toggle('layer-vdc')"> VDC</label>
+<label><input type="checkbox" checked onclick="toggle('layer-bottom')"> Bottom</label>
 
-<svg id="pcb" width="800" height="800" viewBox="0 0 100 100">
+<svg width="800" height="800" viewBox="0 0 100 100">
 
-  <!-- Board outline -->
+  <!-- Board -->
   <rect x="0" y="0" width="100" height="100" fill="none" stroke="white"/>
 
-  <!-- Layers -->
+  <!-- Inner planes -->
   <g id="layer-gnd">
     <rect x="5" y="5" width="90" height="90" class="gnd"/>
   </g>
@@ -56,58 +58,70 @@
 
   <g id="layer-top"></g>
   <g id="layer-bottom"></g>
-  <g id="silkscreen"></g>
+  <g id="silk"></g>
 
 </svg>
 
 <script>
-const svgNS = "http://www.w3.org/2000/svg";
+const NS = "http://www.w3.org/2000/svg";
 const top = document.getElementById("layer-top");
-const silk = document.getElementById("silkscreen");
+const bot = document.getElementById("layer-bottom");
+const silk = document.getElementById("silk");
 
-function addPart(x, y, w, h, label) {
-  const r = document.createElementNS(svgNS, "rect");
-  r.setAttribute("x", x - w/2);
-  r.setAttribute("y", 100 - y - h/2);
-  r.setAttribute("width", w);
-  r.setAttribute("height", h);
-  r.setAttribute("class", "part top");
+function y(y){ return 100 - y; }
+
+function part(x,y,w,h,name){
+  let r = document.createElementNS(NS,"rect");
+  r.setAttribute("x",x-w/2); r.setAttribute("y",y(y)-h/2);
+  r.setAttribute("width",w); r.setAttribute("height",h);
+  r.setAttribute("class","part");
   top.appendChild(r);
 
-  const t = document.createElementNS(svgNS, "text");
-  t.setAttribute("x", x);
-  t.setAttribute("y", 100 - y);
-  t.setAttribute("text-anchor", "middle");
-  t.setAttribute("class", "silk");
-  t.textContent = label;
+  let t = document.createElementNS(NS,"text");
+  t.setAttribute("x",x); t.setAttribute("y",y(y)+h/2+2);
+  t.setAttribute("class","silk"); t.textContent=name;
   silk.appendChild(t);
 }
 
-function addTrace(x1, y1, x2, y2) {
-  const l = document.createElementNS(svgNS, "line");
-  l.setAttribute("x1", x1);
-  l.setAttribute("y1", 100 - y1);
-  l.setAttribute("x2", x2);
-  l.setAttribute("y2", 100 - y2);
-  l.setAttribute("class", "trace top");
-  l.setAttribute("stroke", "yellow");
+function trace(x1,y1,x2,y2,cls){
+  let l = document.createElementNS(NS,"line");
+  l.setAttribute("x1",x1); l.setAttribute("y1",y(y1));
+  l.setAttribute("x2",x2); l.setAttribute("y2",y(y2));
+  l.setAttribute("class","trace "+cls);
   top.appendChild(l);
 }
 
-function toggle(id) {
-  const g = document.getElementById(id);
-  g.style.display = g.style.display === "none" ? "block" : "none";
+function via(x,y){
+  let v = document.createElementNS(NS,"circle");
+  v.setAttribute("cx",x); v.setAttribute("cy",y(y));
+  v.setAttribute("r",0.8); v.setAttribute("class","via");
+  top.appendChild(v);
 }
 
-/* ===== Parts ===== */
-addPart(50, 70, 15, 10, "Q1\nHS");
-addPart(50, 40, 15, 10, "Q2\nLS");
-addPart(40, 60, 6, 10, "Cfilm1");
-addPart(60, 60, 6, 10, "Cfilm2");
+function toggle(id){
+  let g=document.getElementById(id);
+  g.style.display=g.style.display==="none"?"block":"none";
+}
 
-/* ===== Power Trace ===== */
-addTrace(40, 60, 50, 70);
-addTrace(60, 60, 50, 40);
+/* ===== Component Placement ===== */
+part(50,75,16,10,"Q1 HS");
+part(50,45,16,10,"Q2 LS");
+part(35,60,8,12,"Cdc");
+part(65,60,8,12,"Cdc");
+part(20,40,10,8,"GateDrv");
+part(32,50,4,2,"Rg");
+
+/* ===== Power Loop ===== */
+trace(35,60,50,75,"power top");   // Cdc → Q1
+trace(50,75,50,45,"power top");   // Q1 → Q2
+trace(50,45,65,60,"power top");   // Q2 → Cdc
+
+/* ===== Gate Loop ===== */
+trace(20,40,32,50,"gate bottom"); // Driver → Rg
+via(32,50);
+trace(32,50,50,75,"gate top");    // Rg → Gate
+trace(50,75,50,45,"gate top");    // Gate return (Kelvin)
+via(20,40);
 
 </script>
 
