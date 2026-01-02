@@ -2,151 +2,114 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Half-Bridge PCB Layout</title>
-<style>
-  svg { border: 1px solid #aaa; }
-  .connector { fill: #4CAF50; }
-  .electrolytic { fill: #FF9800; }
-  .film { fill: #FFC107; }
-  .mosfet { fill: #F44336; }
-  .driver_ic { fill: #2196F3; }
-  .resistor { fill: #9C27B0; }
-  .isolated_converter { fill: #795548; }
-  .bypass { fill: #00BCD4; }
-</style>
-</head>
-<body>
+<title>Half-Bridge PCB Layout Tool</title>
 
-<svg width="1000" height="1000" viewBox="0 0 100 100">
-  <script>
-  const parts = [
-    // JSON from above pasted here
-    
-  {
-    "name": "Power Connector",
-    "type": "connector",
-    "size": [10, 10],
-    "position": [10, 90]
-  },
-  {
-    "name": "Electrolytic Cap 1",
-    "type": "electrolytic",
-    "size": [8, 15],
-    "position": [30, 80]
-  },
-  {
-    "name": "Electrolytic Cap 2",
-    "type": "electrolytic",
-    "size": [8, 15],
-    "position": [70, 80]
-  },
-  {
-    "name": "Film Cap 1",
-    "type": "film",
-    "size": [6, 10],
-    "position": [40, 60]
-  },
-  {
-    "name": "Film Cap 2",
-    "type": "film",
-    "size": [6, 10],
-    "position": [60, 60]
-  },
-  {
-    "name": "MOSFET High",
-    "type": "mosfet",
-    "size": [15, 10],
-    "position": [50, 70]
-  },
-  {
-    "name": "MOSFET Low",
-    "type": "mosfet",
-    "size": [15, 10],
-    "position": [50, 40]
-  },
-  {
-    "name": "Gate Driver HS",
-    "type": "driver_ic",
-    "size": [6, 5],
-    "position": [20, 70]
-  },
-  {
-    "name": "Gate Driver LS",
-    "type": "driver_ic",
-    "size": [6, 5],
-    "position": [20, 40]
-  },
-  {
-    "name": "Gate R ON HS",
-    "type": "resistor",
-    "size": [5, 2],
-    "position": [40, 75]
-  },
-  {
-    "name": "Gate R OFF HS",
-    "type": "resistor",
-    "size": [5, 2],
-    "position": [45, 75]
-  },
-  {
-    "name": "Gate R ON LS",
-    "type": "resistor",
-    "size": [5, 2],
-    "position": [40, 35]
-  },
-  {
-    "name": "Gate R OFF LS",
-    "type": "resistor",
-    "size": [5, 2],
-    "position": [45, 35]
-  },
-  {
-    "name": "PWM Signal Connector",
-    "type": "connector",
-    "size": [6, 6],
-    "position": [10, 10]
-  },
-  {
-    "name": "Isolated DC/DC 1",
-    "type": "isolated_converter",
-    "size": [10, 10],
-    "position": [80, 70]
-  },
-  {
-    "name": "Isolated DC/DC 2",
-    "type": "isolated_converter",
-    "size": [10, 10],
-    "position": [80, 30]
-  },
-  {
-    "name": "Bypass Cap 1",
-    "type": "bypass",
-    "size": [3, 3],
-    "position": [22, 68]
-  },
-  {
-    "name": "Bypass Cap 2",
-    "type": "bypass",
-    "size": [3, 3],
-    "position": [22, 42]
+<style>
+  body { font-family: Arial; }
+  .controls { margin-bottom: 10px; }
+
+  svg {
+    background: #1b5e20; /* PCB green */
+    border: 2px solid #333;
   }
 
-  ];
+  /* Layer colors */
+  .top    { fill: #c62828; }
+  .bottom { fill: #1565c0; }
+  .trace  { stroke-width: 1.5; fill: none; }
+  .gnd    { fill: rgba(0,0,0,0.25); }
+  .vdc    { fill: rgba(255,255,255,0.25); }
 
-  const svgNS = "http://www.w3.org/2000/svg";
+  /* Parts */
+  .part { stroke: black; stroke-width: 0.3; }
 
-  parts.forEach(p => {
-    let rect = document.createElementNS(svgNS, "rect");
-    rect.setAttribute("x", p.position[0] - p.size[0]/2);
-    rect.setAttribute("y", 100 - p.position[1] - p.size[1]/2);
-    rect.setAttribute("width", p.size[0]);
-    rect.setAttribute("height", p.size[1]);
-    rect.setAttribute("class", p.type);
-    rect.setAttribute("title", p.name);
-    document.querySelector("svg").appendChild(rect);
-  });
-  </script>
+  /* Silkscreen */
+  .silk { fill: white; font-size: 2px; }
+
+</style>
+</head>
+
+<body>
+
+<h3>Half-Bridge PCB Layout (Conceptual CAD)</h3>
+
+<div class="controls">
+  <label><input type="checkbox" checked onchange="toggle('layer-top')"> Top</label>
+  <label><input type="checkbox" checked onchange="toggle('layer-gnd')"> GND</label>
+  <label><input type="checkbox" checked onchange="toggle('layer-vdc')"> VDC</label>
+  <label><input type="checkbox" checked onchange="toggle('layer-bottom')"> Bottom</label>
+</div>
+
+<svg id="pcb" width="800" height="800" viewBox="0 0 100 100">
+
+  <!-- Board outline -->
+  <rect x="0" y="0" width="100" height="100" fill="none" stroke="white"/>
+
+  <!-- Layers -->
+  <g id="layer-gnd">
+    <rect x="5" y="5" width="90" height="90" class="gnd"/>
+  </g>
+
+  <g id="layer-vdc">
+    <rect x="10" y="10" width="80" height="80" class="vdc"/>
+  </g>
+
+  <g id="layer-top"></g>
+  <g id="layer-bottom"></g>
+  <g id="silkscreen"></g>
+
 </svg>
+
+<script>
+const svgNS = "http://www.w3.org/2000/svg";
+const top = document.getElementById("layer-top");
+const silk = document.getElementById("silkscreen");
+
+function addPart(x, y, w, h, label) {
+  const r = document.createElementNS(svgNS, "rect");
+  r.setAttribute("x", x - w/2);
+  r.setAttribute("y", 100 - y - h/2);
+  r.setAttribute("width", w);
+  r.setAttribute("height", h);
+  r.setAttribute("class", "part top");
+  top.appendChild(r);
+
+  const t = document.createElementNS(svgNS, "text");
+  t.setAttribute("x", x);
+  t.setAttribute("y", 100 - y);
+  t.setAttribute("text-anchor", "middle");
+  t.setAttribute("class", "silk");
+  t.textContent = label;
+  silk.appendChild(t);
+}
+
+function addTrace(x1, y1, x2, y2) {
+  const l = document.createElementNS(svgNS, "line");
+  l.setAttribute("x1", x1);
+  l.setAttribute("y1", 100 - y1);
+  l.setAttribute("x2", x2);
+  l.setAttribute("y2", 100 - y2);
+  l.setAttribute("class", "trace top");
+  l.setAttribute("stroke", "yellow");
+  top.appendChild(l);
+}
+
+function toggle(id) {
+  const g = document.getElementById(id);
+  g.style.display = g.style.display === "none" ? "block" : "none";
+}
+
+/* ===== Parts ===== */
+addPart(50, 70, 15, 10, "Q1\nHS");
+addPart(50, 40, 15, 10, "Q2\nLS");
+addPart(40, 60, 6, 10, "Cfilm1");
+addPart(60, 60, 6, 10, "Cfilm2");
+
+/* ===== Power Trace ===== */
+addTrace(40, 60, 50, 70);
+addTrace(60, 60, 50, 40);
+
+</script>
 
 </body>
 </html>
