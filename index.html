@@ -1,63 +1,108 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-    <title>Professional Half-Bridge PCB Artwork Visualizer</title>
+    <meta charset="UTF-8">
+    <title>Professional Half-Bridge Artwork Visualizer</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: #eee; display: flex; }
-        #controls { width: 300px; padding: 20px; background: #252525; border-right: 1px solid #444; }
-        #pcb-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; background: #111; position: relative; }
-        svg { background: #0c1a10; box-shadow: 0 0 50px rgba(0,0,0,0.5); border: 3px solid #333; }
-        .layer { transition: opacity 0.3s; }
-        .label-text { font-size: 2px; fill: white; pointer-events: none; font-family: monospace; }
-        button { width: 100%; padding: 10px; margin: 5px 0; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
-        .btn-l1 { background: #ff4d4d; color: white; }
-        .btn-l2 { background: #4dffff; color: #000; }
-        .btn-l3 { background: #4dff4d; color: #000; }
-        .btn-l4 { background: #ff4dff; color: white; }
-        .info { font-size: 0.8em; color: #aaa; margin-top: 20px; line-height: 1.6; }
-        strong { color: #ffd700; }
+        body { font-family: 'Courier New', monospace; background: #121212; color: #00ff00; margin: 0; display: flex; }
+        #sidebar { width: 350px; padding: 20px; background: #1e1e1e; border-right: 2px solid #333; height: 100vh; overflow-y: auto; }
+        #viewer { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0a0a0a; }
+        svg { background: #0c1a10; border: 1px solid #444; box-shadow: 0 0 30px rgba(0,255,0,0.1); }
+        .layer-toggle { margin-bottom: 15px; padding: 10px; border: 1px solid #444; border-radius: 5px; }
+        label { cursor: pointer; display: block; margin: 5px 0; }
+        input[type="checkbox"] { margin-right: 10px; }
+        .component-label { font-size: 2px; fill: #ffffff; pointer-events: none; }
+        .pin { stroke-width: 0.1; }
+        h3 { color: #ffd700; border-bottom: 1px solid #ffd700; padding-bottom: 5px; }
     </style>
 </head>
 <body>
 
-<div id="controls">
-    <h3>Layer Visibility</h3>
-    <button class="btn-l1" onclick="toggleLayer('L1')">Layer 1: Top (Power/Gate)</button>
-    <button class="btn-l2" onclick="toggleLayer('L2')">Layer 2: Inner (Vdc- Plane)</button>
-    <button class="btn-l3" onclick="toggleLayer('L3')">Layer 3: Inner (Kelvin Ret)</button>
-    <button class="btn-l4" onclick="toggleLayer('L4')">Layer 4: Bottom (Phase/Aux)</button>
-    
-    <div class="info">
-        <strong>Expert Direction:</strong><br>
-        1. <b>Red (L1)</b> & <b>Cyan (L2)</b> overlap creates a low-inductance DC-link.<br><br>
-        2. <b>Gate Path (L1)</b> and <b>Kelvin Return (L3)</b> are stacked to cancel magnetic flux.<br><br>
-        3. <b>Phase Node (Purple, L4)</b> is maximized for thermal but kept away from signal lines.
+<div id="sidebar">
+    <h3>PCB LAYER CONTROL</h3>
+    <div class="layer-toggle">
+        <label><input type="checkbox" id="checkL1" checked onchange="update()"> <b>L1: TOP (Power/Signal)</b></label>
+        <label><input type="checkbox" id="checkL2" checked onchange="update()"> <span style="color:#00ffff">L2: Inner 1 (GND Plane)</span></label>
+        <label><input type="checkbox" id="checkL3" checked onchange="update()"> <span style="color:#ff00ff">L3: Inner 2 (Aux/Kelvin)</span></label>
+        <label><input type="checkbox" id="checkL4" checked onchange="update()"> <span style="color:#ffff00">L4: BOTTOM (Phase/Heat)</span></label>
     </div>
+
+    <h3>DESIGN RULES</h3>
+    <ul style="font-size: 0.85em; color: #ccc; padding-left: 20px;">
+        <li><b>Vdc+ Pour:</b> L1 Red Polygon</li>
+        <li><b>Kelvin Source:</b> L3 Magenta Trace (Shadowing L1 Gate)</li>
+        <li><b>ISO Barrier:</b> 8.5mm Clear zone</li>
+        <li><b>Thermal Vias:</b> 0.5mm / 1.27mm Pitch</li>
+    </ul>
 </div>
 
-<div id="pcb-container">
-    <svg width="800" height="600" viewBox="0 0 120 90">
-        <rect x="0" y="0" width="120" height="90" fill="#0c1a10" />
-        
-        <g id="L2" class="layer" style="opacity: 0.4;">
-            <path d="M 5 5 H 55 V 85 H 5 Z" fill="#00ffff" fill-opacity="0.5" />
-            <text x="7" y="10" class="label-text" fill="#00ffff">L2: DC- POWER PLANE</text>
+<div id="viewer">
+    <svg width="900" height="700" viewBox="0 0 150 110" id="pcb-svg">
+        <rect x="0" y="0" width="150" height="110" fill="#0c1a10" />
+
+        <g id="L2_Group">
+            <path d="M 5 5 H 70 V 105 H 5 Z" fill="#00ffff" fill-opacity="0.2" />
+            <text x="5" y="4" class="component-label" style="fill:#00ffff">L2 DC- SOLID PLANE</text>
         </g>
 
-        <g id="L4" class="layer" style="opacity: 0.3;">
-            <rect x="60" y="30" width="40" height="40" fill="#ff00ff" />
-            <text x="62" y="35" class="label-text" fill="#ff00ff">L4: PHASE NODE (Vsw)</text>
+        <g id="L3_Group">
+            <path d="M 105 24.54 H 125 V 20" stroke="#ff00ff" stroke-width="1.2" fill="none" />
+            <path d="M 105 64.54 H 125 V 60" stroke="#ff00ff" stroke-width="1.2" fill="none" />
+            <text x="110" y="15" class="component-label" style="fill:#ff00ff">L3 KELVIN RETURN</text>
         </g>
 
-        <g id="L3" class="layer" style="opacity: 0.6;">
-            <path d="M 82 22 L 95 22 L 95 15" stroke="#00ff00" stroke-width="1.5" fill="none" />
-            <path d="M 82 52 L 95 52 L 95 45" stroke="#00ff00" stroke-width="1.5" fill="none" />
-            <text x="85" y="12" class="label-text" fill="#00ff00">L3: KELVIN RETURN</text>
+        <g id="L4_Group">
+            <rect x="75" y="30" width="45" height="50" fill="#ffff00" fill-opacity="0.15" />
+            <text x="75" y="28" class="component-label" style="fill:#ffff00">L4 PHASE NODE (VSW)</text>
         </g>
 
-        <g id="L1" class="layer">
-            <path d="M 5 10 H 50 V 30 H 60 V 15 H 75 V 35 H 5 Z" fill="#ff4d4d" fill-opacity="0.7" />
-            <text x="7" y="14" class="label-text">L1: Vdc+ MAIN BUS</text>
+        <g id="L1_Group">
+            <rect x="5" y="40" width="15" height="30" fill="#333" stroke="#fff" stroke-width="0.5"/>
+            <text x="5" y="38" class="component-label">J1: DC INPUT (M5)</text>
 
-            <g id="Q1">
-                <rect x="60" y="15
+            <circle cx="35" cy="35" r="8" fill="none" stroke="#fff" stroke-width="0.3" />
+            <circle cx="35" cy="75" r="8" fill="none" stroke="#fff" stroke-width="0.3" />
+            <text x="28" y="25" class="component-label">C_ELEC 1,2</text>
+
+            <rect x="55" y="25" width="10" height="25" fill="none" stroke="#00c8ff" stroke-width="0.5" />
+            <rect x="55" y="60" width="10" height="25" fill="none" stroke="#00c8ff" stroke-width="0.5" />
+            <text x="55" y="23" class="component-label">C_FILM (Decoupling)</text>
+
+            <g transform="translate(85, 20)">
+                <rect x="0" y="0" width="16" height="21" fill="none" stroke="#ffd700" stroke-width="0.4" />
+                <circle cx="20" cy="2" r="0.8" fill="#c0c0c0" /> <text x="22" y="3" class="component-label">G</text>
+                <circle cx="20" cy="4.54" r="0.8" fill="#c0c0c0" /> <text x="22" y="5.5" class="component-label">Ks</text>
+                <rect x="-5" y="1" width="6" height="3" fill="#ff4444" /> <rect x="-5" y="14" width="6" height="3" fill="#ffff00" /> <text x="2" y="12" class="component-label">Q1 SiC</text>
+            </g>
+
+            <g transform="translate(85, 60)">
+                <rect x="0" y="0" width="16" height="21" fill="none" stroke="#ffd700" stroke-width="0.4" />
+                <circle cx="20" cy="2" r="0.8" fill="#c0c0c0" />
+                <circle cx="20" cy="4.54" r="0.8" fill="#c0c0c0" />
+                <rect x="-5" y="1" width="6" height="3" fill="#ffff00" /> <rect x="-5" y="14" width="6" height="3" fill="#00ffff" /> <text x="2" y="12" class="component-label">Q2 SiC</text>
+            </g>
+
+            <rect x="125" y="18" width="10" height="8" fill="#222" stroke="#fff" stroke-width="0.2" />
+            <rect x="125" y="58" width="10" height="8" fill="#222" stroke="#fff" stroke-width="0.2" />
+            <text x="125" y="16" class="component-label">U1: DRIVER</text>
+
+            <rect x="125" y="2" width="20" height="10" fill="none" stroke="#aaa" stroke-width="0.4" />
+            <rect x="125" y="88" width="20" height="10" fill="none" stroke="#aaa" stroke-width="0.4" />
+            <text x="125" y="1" class="component-label">RECOM RP (DCDC)</text>
+
+            <rect x="110" y="18.5" width="2" height="1.2" fill="#fff" /> <text x="110" y="17.5" class="component-label">Ron</text>
+            <rect x="115" y="18.5" width="2" height="1.2" fill="#fff" /> <text x="115" y="17.5" class="component-label">Roff</text>
+        </g>
+    </svg>
+</div>
+
+<script>
+    function update() {
+        document.getElementById('L1_Group').style.display = document.getElementById('checkL1').checked ? 'inline' : 'none';
+        document.getElementById('L2_Group').style.display = document.getElementById('checkL2').checked ? 'inline' : 'none';
+        document.getElementById('L3_Group').style.display = document.getElementById('checkL3').checked ? 'inline' : 'none';
+        document.getElementById('L4_Group').style.display = document.getElementById('checkL4').checked ? 'inline' : 'none';
+    }
+</script>
+</body>
+</html>
