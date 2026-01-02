@@ -2,155 +2,98 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Realistic Half-Bridge PCB Layout Visualizer</title>
+    <title>Pro-Level Half-Bridge PCB Layout Visualizer</title>
     <style>
-        body { font-family: 'Segoe UI', 'Noto Sans KR', sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: #ecf0f1; }
-        #app-container { display: flex; gap: 30px; padding: 30px; background: #34495e; border-radius: 15px; margin-top: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
-        .controls { width: 320px; display: flex; flex-direction: column; gap: 20px; background: rgba(0,0,0,0.25); padding: 20px; border-radius: 10px; }
-        .pcb-canvas { background: #1a1a1a; border: 3px solid #555; border-radius: 8px; position: relative; width: 700px; height: 500px; overflow: hidden; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1e1e1e; color: #eee; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #container { display: flex; gap: 20px; background: #2d2d2d; padding: 25px; border-radius: 15px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
+        .controls { width: 350px; display: flex; flex-direction: column; gap: 15px; }
+        .pcb-canvas { background: #121212; border: 2px solid #444; width: 800px; height: 600px; position: relative; border-radius: 10px; }
         svg { width: 100%; height: 100%; }
-        .layer-control { display: flex; align-items: center; justify-content: space-between; }
-        input[type="range"] { width: 120px; cursor: pointer; }
-        input[type="checkbox"] { cursor: pointer; transform: scale(1.2); }
-        h2 { margin: 10px 0 15px 0; font-size: 1.4em; color: #ecf0f1; border-bottom: 2px solid #7f8c8d; padding-bottom: 10px; }
-        .legend { font-size: 0.9em; margin-top: 15px; line-height: 1.8; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; }
-        .legend strong { color: #f1c40f; }
-        .desc { max-width: 900px; margin-top: 30px; line-height: 1.7; color: #bdc3c7; background: #34495e; padding: 25px; border-radius: 15px; }
-        .desc h3 { color: #e67e22; border-bottom: 1px solid #e67e22; padding-bottom: 10px; display: inline-block; }
-        span.color-box { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 8px; vertical-align: middle; border: 1px solid rgba(255,255,255,0.3); }
-        /* SVG Text Styles */
-        .pin-label { font-size: 9px; fill: #bdc3c7; }
-        .comp-label { font-size: 11px; fill: #ecf0f1; font-weight: bold; }
+        .layer-ctrl { display: flex; align-items: center; justify-content: space-between; background: #3d3d3d; padding: 10px; border-radius: 5px; }
+        input[type="range"] { width: 100px; }
+        h2 { border-bottom: 2px solid #e67e22; padding-bottom: 5px; color: #e67e22; }
+        .status-box { font-size: 0.85em; background: #111; padding: 15px; border-radius: 8px; line-height: 1.6; border-left: 4px solid #e74c3c; }
+        .label { font-weight: bold; font-size: 11px; }
+        .pin-text { font-size: 8px; fill: #fff; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<h1>High-Voltage Half-Bridge PCB Layout Strategy (TO-247-4)</h1>
+<h1>300V Half-Bridge "Real-World" Artwork Guide</h1>
 
-<div id="app-container">
+<div id="container">
     <div class="controls">
-        <h2>Layer Visibility Control</h2>
-        <div class="layer-control">
-            <label><span class="color-box" style="background:#e74c3c"></span>L1 (Top: Power+)</label>
-            <input type="checkbox" id="l1-vis" checked>
-            <input type="range" id="l1-op" min="0" max="1" step="0.1" value="0.9">
+        <h2>PCB Layer Management</h2>
+        <div class="layer-ctrl">
+            <label><span style="color:#e74c3c">■</span> L1: Power & Comp</label>
+            <input type="range" id="l1-op" min="0" max="1" step="0.1" value="1">
         </div>
-        <div class="layer-control">
-            <label><span class="color-box" style="background:#3498db"></span>L2 (Inner1: GND Plane)</label>
-            <input type="checkbox" id="l2-vis" checked>
-            <input type="range" id="l2-op" min="0" max="1" step="0.1" value="0.5">
+        <div class="layer-ctrl">
+            <label><span style="color:#3498db">■</span> L2: Solid GND Plane</label>
+            <input type="range" id="l2-op" min="0" max="1" step="0.1" value="0.3">
         </div>
-        <div class="layer-control">
-            <label><span class="color-box" style="background:#2ecc71"></span>L3 (Inner2: Signals)</label>
-            <input type="checkbox" id="l3-vis">
-            <input type="range" id="l3-op" min="0" max="1" step="0.1" value="0.4">
-        </div>
-        <div class="layer-control">
-            <label><span class="color-box" style="background:#9b59b6"></span>L4 (Bottom: Misc)</label>
-            <input type="checkbox" id="l4-vis">
-            <input type="range" id="l4-op" min="0" max="1" step="0.1" value="0.4">
+        <div class="layer-ctrl">
+            <label><span style="color:#2ecc71">■</span> L3: Gate Drive Path</label>
+            <input type="range" id="l3-op" min="0" max="1" step="0.1" value="0.3">
         </div>
 
-        <h2>Design Key Points</h2>
-        <div class="legend">
-            <strong>1. TO-247-4 Footprint:</strong> 실제 핀 배열(G-KS-S-D 일렬 배치) 반영.<br>
-            <strong>2. Sandwich Structure:</strong> L1(적색)의 넓은 버스바 밑에 L2(청색) GND 통판을 깔아 인덕턴스 상쇄.<br>
-            <strong>3. Minimized V_SW Area:</strong> HS Source와 LS Drain 사이 연결 노드(황색) 면적 극소화.<br>
-            <strong>4. Critical Loop:</strong> MLCC → HS MOSFET → LS MOSFET → MLCC 루프 최단 거리 배치.
+        <div class="status-box">
+            <strong>🚀 실무 배선 핵심 원칙:</strong><br>
+            1. <b>Clearance (이격):</b> $V_{DC}$와 $V_{SW}$는 다른 핀을 '돌아서' 배선.<br>
+            2. <b>Kelvin Source:</b> Gate 신호와 한 쌍으로 하부 층에서 중첩 배선.<br>
+            3. <b>Decoupling:</b> MLCC는 전원 전류가 MOSFET으로 들어가기 직전 경로에 배치.
         </div>
     </div>
 
     <div class="pcb-canvas">
-        <svg id="pcb-svg" viewBox="0 0 700 500">
-            <rect x="10" y="10" width="680" height="480" fill="#222f3e" stroke="#7f8c8d" stroke-width="3" rx="10" ry="10" />
-            
-            <g id="layer-l2" opacity="0.5">
-                <rect x="30" y="30" width="640" height="440" fill="#3498db" rx="5" ry="5" />
-                <text x="50" y="60" fill="white" font-size="14" font-weight="bold">L2: SOLID GND PLANE (Image Plane)</text>
-                <circle cx="522" cy="350" r="5" fill="#2c3e50" stroke="#3498db" stroke-width="2"/>
-                 <text x="530" y="355" fill="#ecf0f1" font-size="10">Via to LS Source</text>
+        <svg viewBox="0 0 800 600">
+            <rect x="20" y="20" width="760" height="560" fill="#143d1f" rx="10" />
+
+            <g id="layer-l2" opacity="0.3">
+                <rect x="40" y="40" width="720" height="520" fill="#3498db" />
+                <text x="50" y="60" fill="white" font-size="14">L2: GROUND PLANE (Reference)</text>
             </g>
 
-            <g id="layer-l1" opacity="0.9">
-                <g transform="translate(50, 200)">
-                    <rect x="0" y="-20" width="40" height="40" fill="#95a5a6" stroke="#7f8c8d" />
-                    <circle cx="20" cy="0" r="8" fill="#c0392b" />
-                    <text x="5" y="-25" class="comp-label">VDC+ Input (M5)</text>
-                    
-                    <circle cx="100" cy="0" r="35" fill="#34495e" stroke="#c0392b" stroke-width="4" />
-                    <text x="75" y="-45" class="comp-label">Bulk Cap (Electrolytic)</text>
-                    <text x="90" y="5" fill="#c0392b" font-size="20" font-weight="bold">+</text>
-                </g>
-
-                <path d="M 70 200 L 150 200 L 300 150 L 560 150 L 560 180 L 320 180 L 70 220 Z" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
-                <text x="180" y="195" fill="white" font-size="12" font-weight="bold">L1: VDC+ Busbar (Sandwiched over L2)</text>
-
-                <g transform="translate(340, 150)">
-                    <rect x="0" y="-15" width="40" height="30" fill="#e74c3c" stroke="#fff" stroke-width="2" />
-                    <text x="2" y="-20" class="comp-label">HF MLCC</text>
-                    <circle cx="35" cy="0" r="3" fill="#3498db" stroke="#fff"/>
-                </g>
-
-                <g transform="translate(450, 120)">
-                    <rect x="0" y="0" width="110" height="60" fill="rgba(44, 62, 80, 0.8)" stroke="#ecf0f1" stroke-width="2"/>
-                    <text x="10" y="20" class="comp-label">HS MOSFET (TO-247-4)</text>
-                    <g transform="translate(15, 45)">
-                        <circle cx="0" cy="0" r="5" fill="#f1c40f" /><text x="-5" y="15" class="pin-label">1(G)</text>
-                        <circle cx="25" cy="0" r="5" fill="#2ecc71" /><text x="18" y="15" class="pin-label">2(KS)</text>
-                        <circle cx="50" cy="0" r="5" fill="#e67e22" /><text x="45" y="15" class="pin-label">3(S)</text>
-                        <circle cx="75" cy="0" r="7" fill="#e74c3c" stroke="#fff" stroke-width="2"/><text x="70" y="15" class="pin-label">4(D)</text>
-                    </g>
-                </g>
-
-                <path d="M 500 165 L 500 250 L 525 320" fill="none" stroke="#f39c12" stroke-width="18" stroke-linecap="round" />
-                <text x="520" y="240" fill="#f39c12" font-size="14" font-weight="bold">V_SW Node (Minimize Area!)</text>
-
-                <g transform="translate(450, 320)">
-                    <rect x="0" y="0" width="110" height="60" fill="rgba(44, 62, 80, 0.8)" stroke="#ecf0f1" stroke-width="2"/>
-                    <text x="10" y="50" class="comp-label">LS MOSFET (TO-247-4)</text>
-                    <g transform="translate(15, 15)">
-                        <circle cx="0" cy="0" r="5" fill="#f1c40f" /><text x="-5" y="-8" class="pin-label">1(G)</text>
-                        <circle cx="25" cy="0" r="5" fill="#2ecc71" /><text x="18" y="-8" class="pin-label">2(KS)</text>
-                        <circle cx="50" cy="0" r="7" fill="#3498db" stroke="#fff" stroke-width="2"/><text x="45" y="-8" class="pin-label">3(S)</text>
-                        <circle cx="75" cy="0" r="5" fill="#f39c12" /><text x="70" y="-8" class="pin-label">4(D)</text>
-                    </g>
-                </g>
+            <g id="layer-l3" opacity="0.3">
+                <path d="M 525 155 Q 400 155 350 180" fill="none" stroke="#2ecc71" stroke-width="4" stroke-dasharray="5,2" />
+                <path d="M 525 405 Q 400 405 350 380" fill="none" stroke="#2ecc71" stroke-width="4" stroke-dasharray="5,2" />
+                <text x="350" y="170" fill="#2ecc71" font-size="12">L3: Gate/KS Return Loop</text>
             </g>
 
-            <g id="layer-l3" opacity="0" display="none"><text x="50" y="450" fill="#2ecc71">L3 Placeholder</text></g>
-            <g id="layer-l4" opacity="0" display="none"><text x="50" y="470" fill="#9b59b6">L4 Placeholder</text></g>
+            <g id="layer-l1" opacity="1">
+                <path d="M 40 250 L 150 250 L 250 100 L 575 100 L 575 150 L 555 150 L 555 120 L 250 120 L 150 270 L 40 270 Z" fill="#e74c3c" />
+                <text x="50" y="240" fill="#e74c3c" font-size="12" font-weight="bold">VDC+ BUS (Avoids G, KS, S pins)</text>
+
+                <g transform="translate(500, 150)">
+                    <rect x="0" y="-80" width="100" height="80" fill="#333" stroke="#fff" />
+                    <text x="5" y="-60" fill="#fff" font-size="10">HS MOSFET</text>
+                    <circle cx="10" cy="5" r="6" fill="#555" stroke="#f1c40f" stroke-width="2" /> <circle cx="25" cy="5" r="6" fill="#555" stroke="#2ecc71" stroke-width="2" /> <circle cx="40" cy="5" r="6" fill="#555" stroke="#e67e22" stroke-width="2" /> <circle cx="75" cy="5" r="8" fill="#e74c3c" /> <text x="5" y="25" class="pin-text">G</text><text x="20" y="25" class="pin-text">KS</text>
+                    <text x="37" y="25" class="pin-text">S</text><text x="70" y="25" class="pin-text">D</text>
+                </g>
+
+                <path d="M 540 155 L 540 300 L 575 350 L 575 400 L 555 400 L 555 350 L 520 300 L 520 155 Z" fill="#f39c12" />
+                <text x="585" y="280" fill="#f39c12" font-size="14" font-weight="bold">V_SW Node</text>
+
+                <g transform="translate(500, 400)">
+                    <rect x="0" y="0" width="100" height="80" fill="#333" stroke="#fff" />
+                    <text x="5" y="60" fill="#fff" font-size="10">LS MOSFET</text>
+                    <circle cx="10" cy="5" r="6" fill="#555" stroke="#f1c40f" stroke-width="2" /> <circle cx="25" cy="5" r="6" fill="#555" stroke="#2ecc71" stroke-width="2" /> <circle cx="40" cy="5" r="8" fill="#3498db" /> <circle cx="75" cy="5" r="8" fill="#f39c12" /> <text x="5" y="-10" class="pin-text">G</text><text x="20" y="-10" class="pin-text">KS</text>
+                    <text x="37" y="-10" class="pin-text">S</text><text x="70" y="-10" class="pin-text">D</text>
+                </g>
+
+                <rect x="420" y="100" width="30" height="50" fill="#95a5a6" />
+                <text x="400" y="90" fill="#95a5a6" font-size="10">HF MLCC (Snubber)</text>
+                <circle cx="435" cy="140" r="4" fill="#3498db" />
+            </g>
         </svg>
     </div>
 </div>
 
-<div class="desc">
-    <h3>💡 교수님 가이드 (강의 포인트):</h3>
-    <ul>
-        <li><strong>현실적인 TO-247 핀 배치:</strong> 각 MOSFET의 핀이 <code>1(G) - 2(KS) - 3(S) - 4(D)</code> 순서로 일렬 배치된 것을 확인시키세요. 이 물리적 배치가 라우팅의 제약 조건이 됩니다.</li>
-        <li><strong>L1 & L2 샌드위치 확인:</strong> 'L1(Top)'의 투명도를 조절해 보세요. 붉은색 VDC+ 버스바 바로 아래에 파란색 GND 통판(L2)이 깔려있는 것이 보이시나요? 이 구조가 핵심입니다.</li>
-        <li><strong>파워 루프 추적:</strong> 전류의 흐름을 따라가 보세요. <code>입력 M5 → MLCC → 상단 FET 드레인(4번) → 상단 FET 소스(3번) → 하단 FET 드레인(4번) → 하단 FET 소스(3번) → GND → MLCC</code>로 돌아오는 이 루프의 물리적 면적이 작을수록 좋은 설계입니다.</li>
-        <li><strong>Switching Node (황색):</strong> 상단 소스와 하단 드레인을 잇는 두꺼운 황색 선이 보이시죠? 이 부분은 전압이 0V~300V로 날뛰는 곳입니다. 이 면적을 최소화해야 노이즈를 줄일 수 있습니다.</li>
-    </ul>
-</div>
-
 <script>
-    const layers = ['l1', 'l2', 'l3', 'l4'];
-    layers.forEach(l => {
-        const checkbox = document.getElementById(`${l}-vis`);
-        const slider = document.getElementById(`${l}-op`);
-        const group = document.getElementById(`layer-${l}`);
-
-        if(checkbox && slider && group) {
-            checkbox.addEventListener('change', () => {
-                group.style.display = checkbox.checked ? 'inline' : 'none';
-            });
-            slider.addEventListener('input', () => {
-                group.setAttribute('opacity', slider.value);
-            });
-            // 초기 상태 동기화
-            group.style.display = checkbox.checked ? 'inline' : 'none';
-            group.setAttribute('opacity', slider.value);
-        }
+    ['l1', 'l2', 'l3'].forEach(id => {
+        const slider = document.getElementById(`${id}-op`);
+        const group = document.getElementById(`layer-${id}`);
+        slider.addEventListener('input', () => group.setAttribute('opacity', slider.value));
     });
 </script>
 
