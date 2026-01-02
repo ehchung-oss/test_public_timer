@@ -1,128 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>Half-Bridge PCB CAD Tool</title>
-
-<style>
-body { font-family: Arial; }
-
-svg {
-  background: #1b5e20;
-  border: 2px solid #333;
-}
-
-/* Layers */
-.top    { stroke: #ffeb3b; }
-.bottom { stroke: #03a9f4; }
-.trace  { stroke-width: 1.8; fill: none; }
-.power  { stroke-width: 3.5; }
-.gate   { stroke-dasharray: 2,1; }
-
-.gnd { fill: rgba(0,0,0,0.25); }
-.vdc { fill: rgba(255,255,255,0.25); }
-
-/* Parts */
-.part { fill: #cfd8dc; stroke: black; stroke-width: 0.3; }
-
-/* Via */
-.via { fill: #000; }
-
-/* Silkscreen */
-.silk { fill: white; font-size: 2px; text-anchor: middle; }
-</style>
+    <meta charset="UTF-8">
+    <title>Half-Bridge 4-Layer PCB Layout Visualizer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; }
+        #app-container { display: flex; gap: 20px; padding: 20px; background: #34495e; border-radius: 12px; margin-top: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .controls { width: 300px; display: flex; flex-direction: column; gap: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
+        .pcb-canvas { background: #1a1a1a; border: 2px solid #555; border-radius: 4px; position: relative; width: 600px; height: 400px; overflow: hidden; }
+        svg { width: 100%; height: 100%; }
+        .layer-control { display: flex; align-items: center; justify-content: space-between; }
+        input[type="range"] { width: 100px; }
+        h2 { margin: 10px 0; font-size: 1.2em; color: #ecf0f1; border-bottom: 1px solid #7f8c8d; padding-bottom: 5px; }
+        .legend { font-size: 0.8em; margin-top: 10px; line-height: 1.6; }
+        .desc { max-width: 800px; margin-top: 20px; line-height: 1.6; color: #bdc3c7; }
+        span.color-box { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 5px; }
+    </style>
 </head>
-
 <body>
 
-<h3>Half-Bridge PCB Layout – Power / Gate Loop Visualization</h3>
+<h1>Power Electronics PCB Layout Strategy</h1>
 
-<label><input type="checkbox" checked onclick="toggle('layer-top')"> Top</label>
-<label><input type="checkbox" checked onclick="toggle('layer-gnd')"> GND</label>
-<label><input type="checkbox" checked onclick="toggle('layer-vdc')"> VDC</label>
-<label><input type="checkbox" checked onclick="toggle('layer-bottom')"> Bottom</label>
+<div id="app-container">
+    <div class="controls">
+        <h2>Layer Visibility</h2>
+        <div class="layer-control">
+            <label><span class="color-box" style="background:#e74c3c"></span>L1 (Top - Power)</label>
+            <input type="checkbox" id="l1-vis" checked>
+            <input type="range" id="l1-op" min="0" max="1" step="0.1" value="1">
+        </div>
+        <div class="layer-control">
+            <label><span class="color-box" style="background:#3498db"></span>L2 (Inner - GND)</label>
+            <input type="checkbox" id="l2-vis" checked>
+            <input type="range" id="l2-op" min="0" max="1" step="0.1" value="0.4">
+        </div>
+        <div class="layer-control">
+            <label><span class="color-box" style="background:#2ecc71"></span>L3 (Inner - Gate)</label>
+            <input type="checkbox" id="l3-vis" checked>
+            <input type="range" id="l3-op" min="0" max="1" step="0.1" value="0.4">
+        </div>
+        <div class="layer-control">
+            <label><span class="color-box" style="background:#9b59b6"></span>L4 (Bottom - Aux)</label>
+            <input type="checkbox" id="l4-vis" checked>
+            <input type="range" id="l4-op" min="0" max="1" step="0.1" value="0.4">
+        </div>
 
-<svg width="800" height="800" viewBox="0 0 100 100">
+        <h2>Layout Strategy</h2>
+        <div class="legend">
+            <strong>1. Sandwich:</strong> L1(VDC+)와 L2(GND) 면을 포개어 인덕턴스 상쇄.<br>
+            <strong>2. Switching Node:</strong> HS Source와 LS Drain 사이 면적을 최소화.<br>
+            <strong>3. DC-Link:</strong> M5 입력에서 MLCC가 MOSFET에 가장 가깝게 배치.
+        </div>
+    </div>
 
-  <!-- Board -->
-  <rect x="0" y="0" width="100" height="100" fill="none" stroke="white"/>
+    <div class="pcb-canvas">
+        <svg id="pcb-svg" viewBox="0 0 600 400">
+            <rect x="10" y="10" width="580" height="380" fill="#143d1f" stroke="#fff" stroke-width="2" />
+            
+            <g id="layer-l2" opacity="0.4">
+                <rect x="50" y="50" width="500" height="300" fill="#3498db" />
+                <text x="60" y="70" fill="white" font-size="12">L2: GND Plane (Sandwich Base)</text>
+            </g>
 
-  <!-- Inner planes -->
-  <g id="layer-gnd">
-    <rect x="5" y="5" width="90" height="90" class="gnd"/>
-  </g>
+            <g id="layer-l1" opacity="1">
+                <circle cx="50" cy="100" r="15" fill="#e74c3c" />
+                <text x="40" y="80" fill="#e74c3c" font-size="10">VDC+(M5)</text>
+                
+                <rect x="50" y="90" width="350" height="20" fill="#e74c3c" />
+                
+                <circle cx="150" cy="100" r="20" fill="none" stroke="#e74c3c" stroke-width="3" /> <rect x="250" y="90" width="30" height="20" fill="#e74c3c" /> <text x="245" y="80" fill="white" font-size="10">MLCC</text>
 
-  <g id="layer-vdc">
-    <rect x="10" y="10" width="80" height="80" class="vdc"/>
-  </g>
+                <g transform="translate(400, 80)">
+                    <rect x="0" y="0" width="60" height="80" fill="rgba(255,255,255,0.1)" stroke="white"/>
+                    <text x="5" y="15" fill="white" font-size="10">HS MOSFET</text>
+                    <circle cx="10" cy="60" r="4" fill="#f1c40f" /> <circle cx="20" cy="60" r="4" fill="#2ecc71" /> <circle cx="30" cy="60" r="4" fill="#e67e22" /> <circle cx="45" cy="30" r="6" fill="#e74c3c" /> </g>
 
-  <g id="layer-top"></g>
-  <g id="layer-bottom"></g>
-  <g id="silk"></g>
+                <path d="M 430 140 L 430 200 L 445 230" fill="none" stroke="#f39c12" stroke-width="12" />
+                <text x="450" y="180" fill="#f39c12" font-size="12">Switching Node</text>
 
-</svg>
+                <g transform="translate(400, 230)">
+                    <rect x="0" y="0" width="60" height="80" fill="rgba(255,255,255,0.1)" stroke="white"/>
+                    <text x="5" y="15" fill="white" font-size="10">LS MOSFET</text>
+                    <circle cx="10" cy="60" r="4" fill="#f1c40f" /> <circle cx="20" cy="60" r="4" fill="#2ecc71" /> <circle cx="30" cy="60" r="4" fill="#3498db" /> <circle cx="45" cy="30" r="6" fill="#f39c12" /> </g>
+            </g>
+
+            <g id="layer-l3" opacity="0.4">
+                <path d="M 420 290 Q 350 290 300 290" fill="none" stroke="#2ecc71" stroke-width="3" />
+                <text x="310" y="280" fill="#2ecc71" font-size="10">L3: Gate Return</text>
+            </g>
+        </svg>
+    </div>
+</div>
+
+<div class="desc">
+    <h3>💡 교수님 가이드:</h3>
+    <ul>
+        <li><strong>샌드위치 구조:</strong> L1(빨간색 $V_{DC}+$) 바로 아래에 L2(파란색 GND) 면이 넓게 깔려있음을 확인시키세요. 상하 평면이 겹치면서 루프 인덕턴스가 급감합니다.</li>
+        <li><strong>Switching Node (황색):</strong> 하이 사이드 소스와 로우 사이드 드레인을 잇는 구간입니다. 이 구간의 면적을 줄여야 노이즈 방사를 막을 수 있습니다.</li>
+        <li><strong>컴포넌트 배치:</strong> 전류는 왼쪽(M5 커넥터)에서 들어와 MLCC를 거쳐 오른쪽 MOSFET으로 갑니다. MLCC가 MOSFET 핀에 얼마나 '바짝' 붙어있는지 보여주세요.</li>
+    </ul>
+</div>
 
 <script>
-const NS = "http://www.w3.org/2000/svg";
-const top = document.getElementById("layer-top");
-const bot = document.getElementById("layer-bottom");
-const silk = document.getElementById("silk");
+    const layers = ['l1', 'l2', 'l3', 'l4'];
+    layers.forEach(l => {
+        const checkbox = document.getElementById(`${l}-vis`);
+        const slider = document.getElementById(`${l}-op`);
+        const group = document.getElementById(`layer-${l}`);
 
-function y(y){ return 100 - y; }
+        checkbox.addEventListener('change', () => {
+            group.style.display = checkbox.checked ? 'inline' : 'none';
+        });
 
-function part(x,y,w,h,name){
-  let r = document.createElementNS(NS,"rect");
-  r.setAttribute("x",x-w/2); r.setAttribute("y",y(y)-h/2);
-  r.setAttribute("width",w); r.setAttribute("height",h);
-  r.setAttribute("class","part");
-  top.appendChild(r);
-
-  let t = document.createElementNS(NS,"text");
-  t.setAttribute("x",x); t.setAttribute("y",y(y)+h/2+2);
-  t.setAttribute("class","silk"); t.textContent=name;
-  silk.appendChild(t);
-}
-
-function trace(x1,y1,x2,y2,cls){
-  let l = document.createElementNS(NS,"line");
-  l.setAttribute("x1",x1); l.setAttribute("y1",y(y1));
-  l.setAttribute("x2",x2); l.setAttribute("y2",y(y2));
-  l.setAttribute("class","trace "+cls);
-  top.appendChild(l);
-}
-
-function via(x,y){
-  let v = document.createElementNS(NS,"circle");
-  v.setAttribute("cx",x); v.setAttribute("cy",y(y));
-  v.setAttribute("r",0.8); v.setAttribute("class","via");
-  top.appendChild(v);
-}
-
-function toggle(id){
-  let g=document.getElementById(id);
-  g.style.display=g.style.display==="none"?"block":"none";
-}
-
-/* ===== Component Placement ===== */
-part(50,75,16,10,"Q1 HS");
-part(50,45,16,10,"Q2 LS");
-part(35,60,8,12,"Cdc");
-part(65,60,8,12,"Cdc");
-part(20,40,10,8,"GateDrv");
-part(32,50,4,2,"Rg");
-
-/* ===== Power Loop ===== */
-trace(35,60,50,75,"power top");   // Cdc → Q1
-trace(50,75,50,45,"power top");   // Q1 → Q2
-trace(50,45,65,60,"power top");   // Q2 → Cdc
-
-/* ===== Gate Loop ===== */
-trace(20,40,32,50,"gate bottom"); // Driver → Rg
-via(32,50);
-trace(32,50,50,75,"gate top");    // Rg → Gate
-trace(50,75,50,45,"gate top");    // Gate return (Kelvin)
-via(20,40);
-
+        slider.addEventListener('input', () => {
+            group.setAttribute('opacity', slider.value);
+        });
+    });
 </script>
 
 </body>
