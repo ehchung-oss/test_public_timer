@@ -2,78 +2,135 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Expert PCB Artwork Simulator</title>
+    <title>Expert PCB Artwork Simulator v1.1</title>
     <style>
-        body { background-color: #1a1a1a; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; }
-        canvas { border: 2px solid #555; background-color: #003300; cursor: crosshair; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
-        .controls { margin-top: 20px; padding: 15px; background: #333; border-radius: 8px; }
-        h2 { color: #fff; margin-bottom: 5px; }
-        .info { color: #aaa; font-size: 0.9rem; margin-bottom: 15px; }
+        body { background-color: #1a1a1a; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
+        .canvas-container { position: relative; border: 3px solid #444; border-radius: 8px; overflow: hidden; }
+        canvas { background-color: #002200; display: block; }
+        .controls { margin-top: 20px; padding: 20px; background: #2a2a2a; border-radius: 10px; border: 1px solid #444; }
+        button { font-size: 1.1rem; padding: 12px 24px; margin: 0 10px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; transition: 0.2s; }
+        .btn-draw { background-color: #cc6600; color: white; }
+        .btn-clear { background-color: #444; color: #ccc; }
+        button:hover { transform: scale(1.05); filter: brightness(1.2); }
+        .status-bar { margin-top: 10px; color: #888; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-    <h2>Power Electronics PCB Artwork V1.0</h2>
-    <p class="info">2-Pin Conn → SMD Resistor → SMD LED 순서의 회로 구성</p>
-
-    <canvas id="pcbCanvas" width="600" height="400"></canvas>
+    <h2>PCB ARTWORK EXPERT SYSTEM</h2>
+    
+    <div class="canvas-container">
+        <canvas id="pcbCanvas" width="800" height="400"></canvas>
+    </div>
 
     <div class="controls">
-        <button onclick="drawArtwork()">아트웍 렌더링 시작</button>
-        <button onclick="clearCanvas()">보드 초기화</button>
+        <button class="btn-draw" onclick="runArtwork()">아트웍 설계 시작</button>
+        <button class="btn-clear" onclick="initBoard()">보드 초기화</button>
     </div>
+    <div class="status-bar" id="status">Status: Waiting for command...</div>
 
 <script>
     const canvas = document.getElementById('pcbCanvas');
     const ctx = canvas.getContext('2d');
+    const status = document.getElementById('status');
 
-    // 설계 파라미터 (Expert's Spec)
-    const specs = {
-        padColor: '#c2a13e',    // 금도금/동박 색상
-        traceColor: '#cc6600',  // 구리 배선 색상
-        silkColor: '#ffffff',   // 실크스크린 흰색
-        solderMask: '#004400'   // 솔더마스크 진초록
+    // 설계 색상 규격 (Standard PCB Palette)
+    const COLORS = {
+        board: "#003300",
+        grid: "#004400",
+        pad: "#FFD700",    // Gold Pad
+        trace: "#FF8C00",  // Copper Trace
+        silk: "#FFFFFF"    // Silkscreen
     };
 
-    function drawPad(x, y, w, h, label) {
-        // Pad (동박)
-        ctx.fillStyle = specs.padColor;
-        ctx.fillRect(x - w/2, y - h/2, w, h);
-        // Solder Opening (살짝 작게)
-        ctx.strokeStyle = "#fff";
-        ctx.strokeRect(x - w/2, y - h/2, w, h);
+    // 1. 보드 초기화 및 그리드 생성
+    function initBoard() {
+        ctx.fillStyle = COLORS.board;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        ctx.fillStyle = specs.silkColor;
-        ctx.font = "10px Arial";
-        ctx.fillText(label, x - w/2, y - h/2 - 5);
+        // Grid 렌더링 (10mm 단위 가정)
+        ctx.strokeStyle = COLORS.grid;
+        ctx.lineWidth = 1;
+        for(let x=0; x<canvas.width; x+=20) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+        }
+        for(let y=0; y<canvas.height; y+=20) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
+        status.innerText = "Status: Board Initialized. Ready to route.";
     }
 
+    // 2. 부품 패드 그리기 함수
+    function drawPad(x, y, w, h, name) {
+        ctx.fillStyle = COLORS.pad;
+        ctx.fillRect(x - w/2, y - h/2, w, h);
+        
+        ctx.fillStyle = COLORS.silk;
+        ctx.font = "bold 12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(name, x, y - h/2 - 8);
+    }
+
+    // 3. 배선(Trace) 그리기 함수
     function drawTrace(x1, y1, x2, y2, width) {
         ctx.beginPath();
-        ctx.strokeStyle = specs.traceColor;
+        ctx.strokeStyle = COLORS.trace;
         ctx.lineWidth = width;
+        ctx.lineCap = "round";
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
         ctx.stroke();
     }
 
-    function drawArtwork() {
-        clearCanvas();
+    // 4. 메인 실행 함수
+    function runArtwork() {
+        initBoard(); // 먼저 비우고 시작
+        status.innerText = "Status: Routing in progress...";
 
-        // 1. 2-Pin Connector (Left) - Through Hole 컨셉
-        drawPad(100, 180, 30, 30, "J1-1 (VCC)");
-        drawPad(100, 220, 30, 30, "J1-2 (GND)");
-        ctx.strokeStyle = specs.silkColor;
-        ctx.strokeRect(80, 160, 40, 80); // 커넥터 외곽선
+        // --- 부품 배치 (Placement) ---
+        // J1: 2핀 커넥터
+        drawPad(100, 150, 30, 30, "J1-1 (VCC)");
+        drawPad(100, 250, 30, 30, "J1-2 (GND)");
+        
+        // R1: SMD 2012 저항 (중간 배치)
+        drawPad(300, 150, 20, 25, "R1-1");
+        drawPad(350, 150, 20, 25, "R1-2");
+        
+        // D1: SMD LED (우측 배치)
+        drawPad(550, 150, 20, 25, "LED-A");
+        drawPad(600, 150, 20, 25, "LED-K");
 
-        // 2. SMD Resistor 1608/2012 (Middle)
-        drawPad(250, 180, 15, 20, "R1-1");
-        drawPad(280, 180, 15, 20, "R1-2");
-        ctx.strokeRect(245, 170, 50, 20); // 저항 바디
+        // --- 배선 (Routing) ---
+        // Trace 1: VCC -> Resistor
+        setTimeout(() => {
+            drawTrace(115, 150, 290, 150, 8);
+            status.innerText = "Status: VCC Line Routed.";
+        }, 500);
 
-        // 3. SMD LED (Right)
-        drawPad(420, 180, 15, 20, "D1-A"); // Anode
-        drawPad(450, 180, 15, 20, "D1-K"); // Cathode
-        // LED 기호 (삼각형)
-        ctx.beginPath();
-        ctx.moveTo(430, 175); ctx.lineTo(430,
+        // Trace 2: Resistor -> LED
+        setTimeout(() => {
+            drawTrace(360, 150, 540, 150, 8);
+            status.innerText = "Status: Signal Line Routed.";
+        }, 1000);
+
+        // Trace 3: LED -> GND (L-shape Routing)
+        setTimeout(() => {
+            ctx.beginPath();
+            ctx.strokeStyle = COLORS.trace;
+            ctx.lineWidth = 8;
+            ctx.moveTo(610, 150);
+            ctx.lineTo(700, 150); // 오른쪽으로 꺾고
+            ctx.lineTo(700, 320); // 아래로 내려서
+            ctx.lineTo(100, 320); // 다시 왼쪽으로
+            ctx.lineTo(100, 265); // GND 패드로 연결
+            ctx.stroke();
+            status.innerText = "Status: Ground Return Path Completed.";
+        }, 1500);
+    }
+
+    // 시작 시 보드 초기화 호출
+    window.onload = initBoard;
+
+</script>
+</body>
+</html>
