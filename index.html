@@ -2,34 +2,38 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Expert PCB Placement Advisor</title>
+    <title>Expert PCB Artwork - Loop Optimizer</title>
     <style>
-        body { background-color: #1a1a1a; color: #00ff00; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; }
-        .dashboard { display: flex; gap: 20px; margin: 20px; background: #2a2a2a; padding: 20px; border-radius: 12px; border: 1px solid #444; }
-        canvas { background-color: #001a00; border: 2px solid #555; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .control-panel { width: 300px; }
-        select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; font-weight: bold; }
-        button { background: #cc6600; color: white; cursor: pointer; }
-        .rule-box { background: #111; padding: 10px; font-size: 0.85rem; color: #00d4ff; border-left: 4px solid #00d4ff; }
+        body { background-color: #1a1a1a; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; }
+        .dashboard { display: flex; gap: 20px; margin: 20px; background: #2a2a2a; padding: 20px; border-radius: 12px; }
+        canvas { background-color: #001a00; border: 2px solid #555; }
+        .control-panel { width: 320px; }
+        .status-box { background: #111; padding: 15px; margin-top: 10px; border-left: 4px solid #ffcc00; font-size: 0.85rem; line-height: 1.5; }
+        select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button { background: #cc6600; color: white; border: none; }
+        .layer-indicator { display: flex; gap: 10px; font-size: 0.8rem; margin-bottom: 10px; }
+        .red { color: #ff3333; } .blue { color: #3333ff; }
     </style>
 </head>
 <body>
 
-    <h2>PCB Layout Strategy Advisor (Layer Aware)</h2>
+    <h2>PCB Closed-Loop Design Expert</h2>
 
     <div class="dashboard">
         <div class="control-panel">
-            <label>PCB Layer 수 설정:</label>
+            <div class="layer-indicator">
+                <span class="red">■ Top (Signal)</span>
+                <span class="blue">■ Bottom (Return)</span>
+            </div>
+            <label>설계 레이어 선택:</label>
             <select id="layerSelect">
-                <option value="1">1 Layer (Single Side)</option>
-                <option value="2" selected>2 Layers (Double Side)</option>
-                <option value="4">4 Layers (Internal Plane)</option>
+                <option value="1">1 Layer (같은 층에서 귀로 형성)</option>
+                <option value="2" selected>2 Layers (바닥면 전체 귀로 활용)</option>
             </select>
+            <button onclick="generateArtwork()">폐루프 배선 생성</button>
             
-            <button onclick="analyzeLayout()">배치 및 배선 분석 시작</button>
-            
-            <div id="ruleInfo" class="rule-box">
-                설계 규칙: 레이어 설정에 따라 배선 알고리즘이 변경됩니다.
+            <div id="statusBox" class="status-box">
+                전문가 진단: 대기 중...
             </div>
         </div>
 
@@ -39,16 +43,7 @@
 <script>
     const canvas = document.getElementById('pcbCanvas');
     const ctx = canvas.getContext('2d');
-    const layerSelect = document.getElementById('layerSelect');
-    const ruleInfo = document.getElementById('ruleInfo');
-
-    const COLORS = {
-        top: '#ff3333',     // Top Layer (Red)
-        bottom: '#3333ff',  // Bottom Layer (Blue)
-        pad: '#ffcc00',
-        silk: '#ffffff',
-        board: '#002200'
-    };
+    const COLORS = { top: '#ff3333', bottom: '#4444ff', pad: '#ffcc00', silk: '#ffffff', board: '#002200' };
 
     function init() {
         ctx.fillStyle = COLORS.board;
@@ -64,84 +59,75 @@
         }
     }
 
-    function analyzeLayout() {
-        init();
-        const layers = parseInt(layerSelect.value);
-        
-        // 1. 전문가의 레이어별 전략 정의
-        let strategy = "";
-        if(layers === 1) {
-            strategy = "⚠️ 1층 설계: 배선 교차 불가능. 부품을 일직선으로 배치하여 Loop를 최소화합니다.";
-            renderSingleLayer();
-        } else if(layers === 2) {
-            strategy = "✅ 2층 설계: Via를 사용해 Bottom으로 우회 가능. 신호선은 Top, GND는 Bottom 권장.";
-            renderDoubleLayer();
-        } else {
-            strategy = "🚀 4층 설계: 내부 2/3층을 GND/VCC Plane으로 사용. EMI 최적화 모드 작동.";
-            renderMultiLayer();
-        }
-        ruleInfo.innerText = strategy;
-    }
-
-    function drawComponent(x, y, label, type) {
-        ctx.strokeStyle = COLORS.silk;
-        ctx.lineWidth = 1;
-        if(type === 'res') ctx.strokeRect(x-25, y-10, 50, 20);
-        else if(type === 'conn') ctx.strokeRect(x-15, y-30, 30, 60);
-        
+    function drawPad(x, y, label) {
         ctx.fillStyle = COLORS.pad;
-        ctx.fillRect(x-20, y-5, 10, 10);
-        ctx.fillRect(x+10, y-5, 10, 10);
-        
+        ctx.fillRect(x-10, y-10, 20, 20);
         ctx.fillStyle = COLORS.silk;
-        ctx.font = "12px Arial";
-        ctx.fillText(label, x-20, y-15);
+        ctx.font = "10px Arial";
+        ctx.fillText(label, x-15, y-15);
     }
 
-    // 1층 배선: 겹치지 않게 최대한 단순화
-    function renderSingleLayer() {
-        drawComponent(100, 200, "J1", "conn");
-        drawComponent(300, 200, "R1", "res");
-        drawComponent(500, 200, "LED", "res");
+    function generateArtwork() {
+        init();
+        const layers = parseInt(document.getElementById('layerSelect').value);
+        const status = document.getElementById('statusBox');
 
-        // 배선 (Only Top)
+        // 부품 좌표 정의 (직렬 구성)
+        const J1_VCC = {x: 100, y: 150};
+        const J1_GND = {x: 100, y: 250};
+        const R1_IN = {x: 250, y: 150};
+        const R1_OUT = {x: 300, y: 150};
+        const LED_A = {x: 450, y: 150};
+        const LED_K = {x: 500, y: 150};
+
+        // 1. 부품 배치 (Placement)
+        drawPad(J1_VCC.x, J1_VCC.y, "VCC");
+        drawPad(J1_GND.x, J1_GND.y, "GND");
+        drawPad(R1_IN.x, R1_IN.y, "R-IN");
+        drawPad(R1_OUT.x, R1_OUT.y, "R-OUT");
+        drawPad(LED_A.x, LED_A.y, "LED-A");
+        drawPad(LED_K.x, LED_K.y, "LED-K");
+
+        // 2. 전진 배선 (Forward Path - Top Layer)
         ctx.strokeStyle = COLORS.top;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 6;
+        ctx.lineJoin = "round";
         ctx.beginPath();
-        ctx.moveTo(110, 200); ctx.lineTo(280, 200); // J1 to R1
-        ctx.moveTo(320, 200); ctx.lineTo(480, 200); // R1 to LED
-        ctx.stroke();
-    }
-
-    // 2층 배선: 의도적으로 겹치는 경로를 만들어 Bottom(파랑) 활용 보여주기
-    function renderDoubleLayer() {
-        drawComponent(100, 150, "J1", "conn");
-        drawComponent(300, 250, "R1", "res"); // 엇갈린 배치
-
-        // Top Trace
-        ctx.strokeStyle = COLORS.top;
-        ctx.beginPath();
-        ctx.moveTo(110, 150); ctx.lineTo(200, 150);
+        ctx.moveTo(J1_VCC.x, J1_VCC.y);
+        ctx.lineTo(R1_IN.x, R1_IN.y);
+        ctx.moveTo(R1_OUT.x, R1_OUT.y);
+        ctx.lineTo(LED_A.x, LED_A.y);
         ctx.stroke();
 
-        // Via 표현
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath(); ctx.arc(200, 150, 5, 0, Math.PI*2); ctx.fill();
+        // 3. 귀로 배선 (Return Path - Loop Closure)
+        if(layers === 1) {
+            status.innerHTML = "<strong>[1층 진단]</strong> 배선이 겹치지 않게 우회 경로를 형성합니다. 루프 면적이 넓어 EMI에 취약할 수 있습니다.";
+            ctx.strokeStyle = COLORS.top;
+            ctx.beginPath();
+            ctx.moveTo(LED_K.x, LED_K.y);
+            ctx.lineTo(550, 150);
+            ctx.lineTo(550, 320); // 보드 외곽으로 우회
+            ctx.lineTo(100, 320);
+            ctx.lineTo(J1_GND.x, J1_GND.y);
+            ctx.stroke();
+        } else {
+            status.innerHTML = "<strong>[2층 진단]</strong> Via를 통해 Bottom Layer로 즉시 복귀합니다. 공급선 바로 아래로 귀로를 배치하여 <b>Loop Area를 최소화</b>합니다.";
+            
+            // Via 표현 (LED-K 지점)
+            ctx.fillStyle = "#fff";
+            ctx.beginPath(); ctx.arc(LED_K.x, LED_K.y, 8, 0, Math.PI*2); ctx.fill();
+            
+            // Bottom Trace (Blue)
+            ctx.strokeStyle = COLORS.bottom;
+            ctx.beginPath();
+            ctx.moveTo(LED_K.x, LED_K.y);
+            ctx.lineTo(LED_K.x, 250);
+            ctx.lineTo(J1_GND.x, J1_GND.y);
+            ctx.stroke();
 
-        // Bottom Trace (우회)
-        ctx.strokeStyle = COLORS.bottom;
-        ctx.beginPath();
-        ctx.moveTo(200, 150); ctx.lineTo(200, 250); ctx.lineTo(280, 250);
-        ctx.stroke();
-    }
-
-    function renderMultiLayer() {
-        renderSingleLayer(); // 기본 배선 후
-        // GND Plane 시각화 (반투명)
-        ctx.fillStyle = "rgba(51, 51, 255, 0.2)";
-        ctx.fillRect(50, 50, 500, 300);
-        ctx.fillStyle = COLORS.silk;
-        ctx.fillText("Internal GND Plane Active", 230, 370);
+            // Via 표현 (J1-GND 지점)
+            ctx.beginPath(); ctx.arc(J1_GND.x, J1_GND.y, 8, 0, Math.PI*2); ctx.fill();
+        }
     }
 
     window.onload = init;
