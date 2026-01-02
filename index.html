@@ -1,71 +1,63 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Power Electronics Half-Bridge Layout Visualizer</title>
+    <title>Professional Half-Bridge PCB Artwork Visualizer</title>
     <style>
-        body { font-family: sans-serif; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; }
-        .canvas-container { margin-top: 20px; background: #2e4d3d; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        svg { background: #1a3326; border: 2px solid #555; }
-        .label { fill: white; font-size: 3px; font-weight: bold; pointer-events: none; }
-        .component { stroke: #ffd700; stroke-width: 0.5; fill-opacity: 0.3; }
-        .pad { fill: #c0c0c0; }
-        .trace-v+ { stroke: #ff4500; stroke-width: 8; fill: none; stroke-opacity: 0.6; }
-        .trace-v- { stroke: #00ced1; stroke-width: 8; fill: none; stroke-opacity: 0.6; }
-        .legend { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: white; padding: 15px; border-radius: 5px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: #eee; display: flex; }
+        #controls { width: 300px; padding: 20px; background: #252525; border-right: 1px solid #444; }
+        #pcb-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; background: #111; position: relative; }
+        svg { background: #0c1a10; box-shadow: 0 0 50px rgba(0,0,0,0.5); border: 3px solid #333; }
+        .layer { transition: opacity 0.3s; }
+        .label-text { font-size: 2px; fill: white; pointer-events: none; font-family: monospace; }
+        button { width: 100%; padding: 10px; margin: 5px 0; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
+        .btn-l1 { background: #ff4d4d; color: white; }
+        .btn-l2 { background: #4dffff; color: #000; }
+        .btn-l3 { background: #4dff4d; color: #000; }
+        .btn-l4 { background: #ff4dff; color: white; }
+        .info { font-size: 0.8em; color: #aaa; margin-top: 20px; line-height: 1.6; }
+        strong { color: #ffd700; }
     </style>
 </head>
 <body>
-    <h2>Half-Bridge Layout Visualizer (20yr Expert Ver.)</h2>
-    <div class="canvas-container">
-        <svg width="800" height="640" viewBox="0 0 100 80">
-            <defs>
-                <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>
-                </pattern>
-            </defs>
-            <rect width="100" height="80" fill="url(#grid)" />
 
-            <rect x="5" y="25" width="10" height="30" class="component" fill="#444" />
-            <text x="6" y="23" class="label">J1: DC INPUT</text>
-
-            <circle cx="25" cy="30" r="6" class="component" fill="#222" />
-            <circle cx="25" cy="50" r="6" class="component" fill="#222" />
-            <text x="21" y="22" class="label">C_ELEC 1&2</text>
-
-            <rect x="42" y="28" width="8" height="24" class="component" fill="#00f" />
-            <text x="42" y="26" class="label">C_FILM (Decoupling)</text>
-
-            <rect x="60" y="15" width="15" height="20" class="component" fill="#a52a2a" />
-            <text x="60" y="13" class="label">Q1 (High-Side)</text>
-            <rect x="60" y="45" width="15" height="20" class="component" fill="#a52a2a" />
-            <text x="60" y="43" class="label">Q2 (Low-Side)</text>
-
-            <rect x="82" y="18" width="6" height="8" class="component" fill="#000" />
-            <text x="82" y="16" class="label">U1: DRV</text>
-            <rect x="82" y="48" width="6" height="8" class="component" fill="#000" />
-            <text x="82" y="46" class="label">U2: DRV</text>
-
-            <rect x="76" y="17" width="2.0" height="1.2" class="component" fill="#fff" /> <rect x="76" y="20" width="2.0" height="1.2" class="component" fill="#fff" /> <rect x="76" y="47" width="2.0" height="1.2" class="component" fill="#fff" /> 
-            <rect x="76" y="50" width="2.0" height="1.2" class="component" fill="#fff" />
-
-            <rect x="80" y="2" width="15" height="10" class="component" fill="#888" />
-            <text x="80" y="14" class="label" style="fill: #aaa;">PS1 (ISO DC/DC)</text>
-            <rect x="80" y="68" width="15" height="10" class="component" fill="#888" />
-            <text x="80" y="66" class="label" style="fill: #aaa;">PS2 (ISO DC/DC)</text>
-
-            <rect x="92" y="35" width="5" height="10" class="component" fill="#555" />
-            <text x="88" y="33" class="label">J2: PWM</text>
-
-            <path d="M 15 40 L 42 40 M 50 40 L 60 25" stroke="#ff4500" stroke-width="5" fill="none" stroke-opacity="0.3"/>
-        </svg>
+<div id="controls">
+    <h3>Layer Visibility</h3>
+    <button class="btn-l1" onclick="toggleLayer('L1')">Layer 1: Top (Power/Gate)</button>
+    <button class="btn-l2" onclick="toggleLayer('L2')">Layer 2: Inner (Vdc- Plane)</button>
+    <button class="btn-l3" onclick="toggleLayer('L3')">Layer 3: Inner (Kelvin Ret)</button>
+    <button class="btn-l4" onclick="toggleLayer('L4')">Layer 4: Bottom (Phase/Aux)</button>
+    
+    <div class="info">
+        <strong>Expert Direction:</strong><br>
+        1. <b>Red (L1)</b> & <b>Cyan (L2)</b> overlap creates a low-inductance DC-link.<br><br>
+        2. <b>Gate Path (L1)</b> and <b>Kelvin Return (L3)</b> are stacked to cancel magnetic flux.<br><br>
+        3. <b>Phase Node (Purple, L4)</b> is maximized for thermal but kept away from signal lines.
     </div>
-    <div class="legend">
-        <div><strong>PCB Size:</strong> 100mm x 80mm</div>
-        <div><strong>Layer 1 (Red/Top):</strong> Vdc+, Signal, Gate</div>
-        <div><strong>Layer 2 (Plane):</strong> Vdc- (GND) 전체 평면</div>
-        <div><strong>Layer 3 (Signal):</strong> Kelvin Source Return & Aux Power</div>
-        <div><strong>Clearance:</strong> ISO Barrier > 8mm (U1/U2 사이 및 1차/2차)</div>
-    </div>
-</body>
-</html>
+</div>
+
+<div id="pcb-container">
+    <svg width="800" height="600" viewBox="0 0 120 90">
+        <rect x="0" y="0" width="120" height="90" fill="#0c1a10" />
+        
+        <g id="L2" class="layer" style="opacity: 0.4;">
+            <path d="M 5 5 H 55 V 85 H 5 Z" fill="#00ffff" fill-opacity="0.5" />
+            <text x="7" y="10" class="label-text" fill="#00ffff">L2: DC- POWER PLANE</text>
+        </g>
+
+        <g id="L4" class="layer" style="opacity: 0.3;">
+            <rect x="60" y="30" width="40" height="40" fill="#ff00ff" />
+            <text x="62" y="35" class="label-text" fill="#ff00ff">L4: PHASE NODE (Vsw)</text>
+        </g>
+
+        <g id="L3" class="layer" style="opacity: 0.6;">
+            <path d="M 82 22 L 95 22 L 95 15" stroke="#00ff00" stroke-width="1.5" fill="none" />
+            <path d="M 82 52 L 95 52 L 95 45" stroke="#00ff00" stroke-width="1.5" fill="none" />
+            <text x="85" y="12" class="label-text" fill="#00ff00">L3: KELVIN RETURN</text>
+        </g>
+
+        <g id="L1" class="layer">
+            <path d="M 5 10 H 50 V 30 H 60 V 15 H 75 V 35 H 5 Z" fill="#ff4d4d" fill-opacity="0.7" />
+            <text x="7" y="14" class="label-text">L1: Vdc+ MAIN BUS</text>
+
+            <g id="Q1">
+                <rect x="60" y="15
