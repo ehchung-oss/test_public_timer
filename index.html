@@ -1,108 +1,141 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>Professional Half-Bridge Artwork Visualizer</title>
+    <title>High-Precision Half-Bridge Artwork Manager</title>
     <style>
-        body { font-family: 'Courier New', monospace; background: #121212; color: #00ff00; margin: 0; display: flex; }
-        #sidebar { width: 350px; padding: 20px; background: #1e1e1e; border-right: 2px solid #333; height: 100vh; overflow-y: auto; }
-        #viewer { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0a0a0a; }
-        svg { background: #0c1a10; border: 1px solid #444; box-shadow: 0 0 30px rgba(0,255,0,0.1); }
-        .layer-toggle { margin-bottom: 15px; padding: 10px; border: 1px solid #444; border-radius: 5px; }
-        label { cursor: pointer; display: block; margin: 5px 0; }
-        input[type="checkbox"] { margin-right: 10px; }
-        .component-label { font-size: 2px; fill: #ffffff; pointer-events: none; }
-        .pin { stroke-width: 0.1; }
-        h3 { color: #ffd700; border-bottom: 1px solid #ffd700; padding-bottom: 5px; }
+        :root {
+            --color-l1: #ff0000; /* Top - Red */
+            --color-l2: #00ffff; /* In1 - Cyan */
+            --color-l3: #ff00ff; /* In2 - Magenta */
+            --color-l4: #ffff00; /* Bot - Yellow */
+            --color-silk: #ffffff; /* Silkscreen - White */
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #fff; margin: 0; display: flex; }
+        #control-panel { width: 320px; background: #252525; padding: 20px; border-right: 1px solid #444; height: 100vh; overflow-y: auto; }
+        #canvas-area { flex-grow: 1; display: flex; align-items: center; justify-content: center; background: #000; }
+        .layer-box { margin-bottom: 10px; padding: 10px; border: 1px solid #444; border-radius: 4px; }
+        label { display: flex; align-items: center; cursor: pointer; font-weight: bold; }
+        input[type="checkbox"] { margin-right: 10px; width: 18px; height: 18px; }
+        .opacity-slider { width: 100%; margin-top: 5px; }
+        svg { background: #0c1a10; border: 2px solid #333; }
+        .desc { font-size: 0.85em; color: #aaa; margin-top: 5px; line-height: 1.4; }
+        .legend-dot { width: 10px; height: 10px; display: inline-block; margin-right: 5px; border-radius: 2px; }
+        h2 { color: #ffd700; font-size: 1.2em; border-bottom: 2px solid #ffd700; padding-bottom: 5px; }
     </style>
 </head>
 <body>
 
-<div id="sidebar">
-    <h3>PCB LAYER CONTROL</h3>
-    <div class="layer-toggle">
-        <label><input type="checkbox" id="checkL1" checked onchange="update()"> <b>L1: TOP (Power/Signal)</b></label>
-        <label><input type="checkbox" id="checkL2" checked onchange="update()"> <span style="color:#00ffff">L2: Inner 1 (GND Plane)</span></label>
-        <label><input type="checkbox" id="checkL3" checked onchange="update()"> <span style="color:#ff00ff">L3: Inner 2 (Aux/Kelvin)</span></label>
-        <label><input type="checkbox" id="checkL4" checked onchange="update()"> <span style="color:#ffff00">L4: BOTTOM (Phase/Heat)</span></label>
+<div id="control-panel">
+    <h2>PCB Layer Manager</h2>
+    
+    <div class="layer-box">
+        <label style="color:var(--color-l1)"><input type="checkbox" id="btnL1" checked onchange="render()"> Layer 1 (Top)</label>
+        <input type="range" id="opL1" class="opacity-slider" min="0" max="100" value="80" oninput="render()">
+        <div class="desc">Vdc+, Gate Signal, Main Component Pads</div>
     </div>
 
-    <h3>DESIGN RULES</h3>
-    <ul style="font-size: 0.85em; color: #ccc; padding-left: 20px;">
-        <li><b>Vdc+ Pour:</b> L1 Red Polygon</li>
-        <li><b>Kelvin Source:</b> L3 Magenta Trace (Shadowing L1 Gate)</li>
-        <li><b>ISO Barrier:</b> 8.5mm Clear zone</li>
-        <li><b>Thermal Vias:</b> 0.5mm / 1.27mm Pitch</li>
-    </ul>
+    <div class="layer-box">
+        <label style="color:var(--color-l2)"><input type="checkbox" id="btnL2" checked onchange="render()"> Layer 2 (Inner 1)</label>
+        <input type="range" id="opL2" class="opacity-slider" min="0" max="100" value="40" oninput="render()">
+        <div class="desc">Vdc- (GND) Plane - <b>Magnetic Flux Cancellation</b></div>
+    </div>
+
+    <div class="layer-box">
+        <label style="color:var(--color-l3)"><input type="checkbox" id="btnL3" checked onchange="render()"> Layer 3 (Inner 2)</label>
+        <input type="range" id="opL3" class="opacity-slider" min="0" max="100" value="40" oninput="render()">
+        <div class="desc">Kelvin Return, Aux Power (+15V/-5V)</div>
+    </div>
+
+    <div class="layer-box">
+        <label style="color:var(--color-l4)"><input type="checkbox" id="btnL4" checked onchange="render()"> Layer 4 (Bottom)</label>
+        <input type="range" id="opL4" class="opacity-slider" min="0" max="100" value="30" oninput="render()">
+        <div class="desc">Phase Node Expansion, Shielding</div>
+    </div>
+
+    <div class="layer-box">
+        <label style="color:var(--color-silk)"><input type="checkbox" id="btnSilk" checked onchange="render()"> Silkscreen (Top)</label>
+        <div class="desc">Component Outlines & Reference Designators</div>
+    </div>
+
+    <div style="margin-top:20px; font-size: 0.8em; color: #888;">
+        * 중첩된 영역을 통해 <b>Loop Inductance</b> 최적화 상태를 확인하십시오.
+    </div>
 </div>
 
-<div id="viewer">
-    <svg width="900" height="700" viewBox="0 0 150 110" id="pcb-svg">
-        <rect x="0" y="0" width="150" height="110" fill="#0c1a10" />
+<div id="canvas-area">
+    <svg width="800" height="600" viewBox="0 0 160 120" id="pcb-svg">
+        <g id="L2" fill="var(--color-l2)">
+            <path d="M 5 5 H 85 V 115 H 5 Z" fill-opacity="1" />
+            <rect x="90" y="5" width="65" height="45" fill-opacity="0.5" /> <rect x="90" y="60" width="65" height="55" fill-opacity="0.5" /> </g>
 
-        <g id="L2_Group">
-            <path d="M 5 5 H 70 V 105 H 5 Z" fill="#00ffff" fill-opacity="0.2" />
-            <text x="5" y="4" class="component-label" style="fill:#00ffff">L2 DC- SOLID PLANE</text>
+        <g id="L4" fill="var(--color-l4)">
+            <rect x="65" y="45" width="40" height="30" fill-opacity="0.8" /> <path d="M 5 80 H 60 V 110 H 5 Z" fill-opacity="0.4" /> </g>
+
+        <g id="L3" stroke="var(--color-l3)" fill="none" stroke-width="1.2">
+            <path d="M 125 28 L 108 28" /> 
+            <path d="M 125 83 L 108 83" />
+            <path d="M 140 10 L 140 40 M 140 70 L 140 105" stroke-dasharray="2,1" />
         </g>
 
-        <g id="L3_Group">
-            <path d="M 105 24.54 H 125 V 20" stroke="#ff00ff" stroke-width="1.2" fill="none" />
-            <path d="M 105 64.54 H 125 V 60" stroke="#ff00ff" stroke-width="1.2" fill="none" />
-            <text x="110" y="15" class="component-label" style="fill:#ff00ff">L3 KELVIN RETURN</text>
+        <g id="L1">
+            <path d="M 5 10 H 60 V 40 H 85 V 20 H 100 V 40 H 5 Z" fill="var(--color-l1)" fill-opacity="0.7" />
+            
+            <path d="M 85 45 H 115 V 75 H 85 Z" fill="var(--color-l1)" fill-opacity="0.9" />
+
+            <path d="M 125 25 L 108 25" stroke="var(--color-l1)" stroke-width="1" fill="none" />
+            <path d="M 125 80 L 108 80" stroke="var(--color-l1)" stroke-width="1" fill="none" />
+            
+            <path d="M 5 80 H 60 V 110 H 85 V 90 H 100 V 110 H 5 Z" fill="var(--color-l1)" fill-opacity="0.7" />
         </g>
 
-        <g id="L4_Group">
-            <rect x="75" y="30" width="45" height="50" fill="#ffff00" fill-opacity="0.15" />
-            <text x="75" y="28" class="component-label" style="fill:#ffff00">L4 PHASE NODE (VSW)</text>
-        </g>
-
-        <g id="L1_Group">
-            <rect x="5" y="40" width="15" height="30" fill="#333" stroke="#fff" stroke-width="0.5"/>
-            <text x="5" y="38" class="component-label">J1: DC INPUT (M5)</text>
-
-            <circle cx="35" cy="35" r="8" fill="none" stroke="#fff" stroke-width="0.3" />
-            <circle cx="35" cy="75" r="8" fill="none" stroke="#fff" stroke-width="0.3" />
-            <text x="28" y="25" class="component-label">C_ELEC 1,2</text>
-
-            <rect x="55" y="25" width="10" height="25" fill="none" stroke="#00c8ff" stroke-width="0.5" />
-            <rect x="55" y="60" width="10" height="25" fill="none" stroke="#00c8ff" stroke-width="0.5" />
-            <text x="55" y="23" class="component-label">C_FILM (Decoupling)</text>
-
-            <g transform="translate(85, 20)">
-                <rect x="0" y="0" width="16" height="21" fill="none" stroke="#ffd700" stroke-width="0.4" />
-                <circle cx="20" cy="2" r="0.8" fill="#c0c0c0" /> <text x="22" y="3" class="component-label">G</text>
-                <circle cx="20" cy="4.54" r="0.8" fill="#c0c0c0" /> <text x="22" y="5.5" class="component-label">Ks</text>
-                <rect x="-5" y="1" width="6" height="3" fill="#ff4444" /> <rect x="-5" y="14" width="6" height="3" fill="#ffff00" /> <text x="2" y="12" class="component-label">Q1 SiC</text>
+        <g id="Silk" stroke="var(--color-silk)" fill="none" stroke-width="0.3">
+            <rect x="5" y="45" width="15" height="30" />
+            <text x="6" y="43" fill="white" font-size="3" stroke="none">J1: DC INPUT</text>
+            
+            <circle cx="35" cy="30" r="7" /> <circle cx="35" cy="90" r="7" />
+            <rect x="55" y="25" width="8" height="20" /> <rect x="55" y="75" width="8" height="20" />
+            
+            <g transform="translate(90, 20)">
+                <rect x="0" y="0" width="16" height="20" stroke="#ffd700" stroke-width="0.5" />
+                <circle cx="18" cy="5" r="0.8" fill="white" /> <circle cx="18" cy="8" r="0.8" fill="white" /> <circle cx="-2" cy="5" r="1.2" fill="white" /> <circle cx="-2" cy="15" r="1.2" fill="white" /> <text x="2" y="12" fill="white" font-size="3" stroke="none">Q1 (HS)</text>
             </g>
 
-            <g transform="translate(85, 60)">
-                <rect x="0" y="0" width="16" height="21" fill="none" stroke="#ffd700" stroke-width="0.4" />
-                <circle cx="20" cy="2" r="0.8" fill="#c0c0c0" />
-                <circle cx="20" cy="4.54" r="0.8" fill="#c0c0c0" />
-                <rect x="-5" y="1" width="6" height="3" fill="#ffff00" /> <rect x="-5" y="14" width="6" height="3" fill="#00ffff" /> <text x="2" y="12" class="component-label">Q2 SiC</text>
+            <g transform="translate(90, 75)">
+                <rect x="0" y="0" width="16" height="20" stroke="#ffd700" stroke-width="0.5" />
+                <circle cx="18" cy="5" r="0.8" fill="white" />
+                <circle cx="18" cy="8" r="0.8" fill="white" />
+                <circle cx="-2" cy="5" r="1.2" fill="white" />
+                <circle cx="-2" cy="15" r="1.2" fill="white" />
+                <text x="2" y="12" fill="white" font-size="3" stroke="none">Q2 (LS)</text>
             </g>
 
-            <rect x="125" y="18" width="10" height="8" fill="#222" stroke="#fff" stroke-width="0.2" />
-            <rect x="125" y="58" width="10" height="8" fill="#222" stroke="#fff" stroke-width="0.2" />
-            <text x="125" y="16" class="component-label">U1: DRIVER</text>
-
-            <rect x="125" y="2" width="20" height="10" fill="none" stroke="#aaa" stroke-width="0.4" />
-            <rect x="125" y="88" width="20" height="10" fill="none" stroke="#aaa" stroke-width="0.4" />
-            <text x="125" y="1" class="component-label">RECOM RP (DCDC)</text>
-
-            <rect x="110" y="18.5" width="2" height="1.2" fill="#fff" /> <text x="110" y="17.5" class="component-label">Ron</text>
-            <rect x="115" y="18.5" width="2" height="1.2" fill="#fff" /> <text x="115" y="17.5" class="component-label">Roff</text>
+            <rect x="130" y="20" width="12" height="15" /> <text x="130" y="18" fill="white" font-size="3" stroke="none">DRV1+RP1</text>
+            <rect x="130" y="75" width="12" height="15" /> <text x="130" y="73" fill="white" font-size="3" stroke="none">DRV2+RP2</text>
+            
+            <circle cx="108" cy="28" r="0.5" fill="cyan" />
+            <circle cx="108" cy="83" r="0.5" fill="cyan" />
         </g>
     </svg>
 </div>
 
 <script>
-    function update() {
-        document.getElementById('L1_Group').style.display = document.getElementById('checkL1').checked ? 'inline' : 'none';
-        document.getElementById('L2_Group').style.display = document.getElementById('checkL2').checked ? 'inline' : 'none';
-        document.getElementById('L3_Group').style.display = document.getElementById('checkL3').checked ? 'inline' : 'none';
-        document.getElementById('L4_Group').style.display = document.getElementById('checkL4').checked ? 'inline' : 'none';
+    function render() {
+        const layers = ['L1', 'L2', 'L3', 'L4', 'Silk'];
+        layers.forEach(l => {
+            const el = document.getElementById(l);
+            const btn = document.getElementById('btn' + l);
+            const op = document.getElementById('op' + l);
+            
+            if (btn.checked) {
+                el.style.display = 'inline';
+                if (op) el.setAttribute('opacity', op.value / 100);
+            } else {
+                el.style.display = 'none';
+            }
+        });
     }
+    render();
 </script>
 </body>
 </html>
