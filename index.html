@@ -1,110 +1,42 @@
-[
-  {
-    "name": "Power Connector",
-    "type": "connector",
-    "size": [10, 10],
-    "position": [10, 90]
-  },
-  {
-    "name": "Electrolytic Cap 1",
-    "type": "electrolytic",
-    "size": [8, 15],
-    "position": [30, 80]
-  },
-  {
-    "name": "Electrolytic Cap 2",
-    "type": "electrolytic",
-    "size": [8, 15],
-    "position": [70, 80]
-  },
-  {
-    "name": "Film Cap 1",
-    "type": "film",
-    "size": [6, 10],
-    "position": [40, 60]
-  },
-  {
-    "name": "Film Cap 2",
-    "type": "film",
-    "size": [6, 10],
-    "position": [60, 60]
-  },
-  {
-    "name": "MOSFET High",
-    "type": "mosfet",
-    "size": [15, 10],
-    "position": [50, 70]
-  },
-  {
-    "name": "MOSFET Low",
-    "type": "mosfet",
-    "size": [15, 10],
-    "position": [50, 40]
-  },
-  {
-    "name": "Gate Driver HS",
-    "type": "driver_ic",
-    "size": [6, 5],
-    "position": [20, 70]
-  },
-  {
-    "name": "Gate Driver LS",
-    "type": "driver_ic",
-    "size": [6, 5],
-    "position": [20, 40]
-  },
-  {
-    "name": "Gate R ON HS",
-    "type": "resistor",
-    "size": [5, 2],
-    "position": [40, 75]
-  },
-  {
-    "name": "Gate R OFF HS",
-    "type": "resistor",
-    "size": [5, 2],
-    "position": [45, 75]
-  },
-  {
-    "name": "Gate R ON LS",
-    "type": "resistor",
-    "size": [5, 2],
-    "position": [40, 35]
-  },
-  {
-    "name": "Gate R OFF LS",
-    "type": "resistor",
-    "size": [5, 2],
-    "position": [45, 35]
-  },
-  {
-    "name": "PWM Signal Connector",
-    "type": "connector",
-    "size": [6, 6],
-    "position": [10, 10]
-  },
-  {
-    "name": "Isolated DC/DC 1",
-    "type": "isolated_converter",
-    "size": [10, 10],
-    "position": [80, 70]
-  },
-  {
-    "name": "Isolated DC/DC 2",
-    "type": "isolated_converter",
-    "size": [10, 10],
-    "position": [80, 30]
-  },
-  {
-    "name": "Bypass Cap 1",
-    "type": "bypass",
-    "size": [3, 3],
-    "position": [22, 68]
-  },
-  {
-    "name": "Bypass Cap 2",
-    "type": "bypass",
-    "size": [3, 3],
-    "position": [22, 42]
-  }
-]
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Half-Bridge PCB Layout</title>
+<style>
+  svg { border: 1px solid #aaa; }
+  .connector { fill: #4CAF50; }
+  .electrolytic { fill: #FF9800; }
+  .film { fill: #FFC107; }
+  .mosfet { fill: #F44336; }
+  .driver_ic { fill: #2196F3; }
+  .resistor { fill: #9C27B0; }
+  .isolated_converter { fill: #795548; }
+  .bypass { fill: #00BCD4; }
+</style>
+</head>
+<body>
+
+<svg width="1000" height="1000" viewBox="0 0 100 100">
+  <script>
+  const parts = [
+    // JSON from above pasted here
+  ];
+
+  const svgNS = "http://www.w3.org/2000/svg";
+
+  parts.forEach(p => {
+    let rect = document.createElementNS(svgNS, "rect");
+    rect.setAttribute("x", p.position[0] - p.size[0]/2);
+    rect.setAttribute("y", 100 - p.position[1] - p.size[1]/2);
+    rect.setAttribute("width", p.size[0]);
+    rect.setAttribute("height", p.size[1]);
+    rect.setAttribute("class", p.type);
+    rect.setAttribute("title", p.name);
+    document.querySelector("svg").appendChild(rect);
+  });
+  </script>
+</svg>
+
+</body>
+</html>
